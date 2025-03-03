@@ -55,7 +55,7 @@ nvidia-y += $(NVIDIA_BINARY_OBJECT_O)
 # Define nvidia.ko-specific CFLAGS.
 #
 
-NVIDIA_CFLAGS += -I$(src)/nvidia
+NVIDIA_CFLAGS += -I$(src)/nvidia -fno-inline
 NVIDIA_CFLAGS += -DNVIDIA_UNDEF_LEGACY_BIT_MACROS
 
 ifeq ($(NV_BUILD_TYPE),release)
@@ -95,7 +95,7 @@ clean-files += $(NV_COMPILER_VERSION_HEADER)
 
 NVIDIA_INTERFACE := nvidia/nv-interface.o
 
-# Linux kernel v5.12 and later looks at "always-y", Linux kernel versions 
+# Linux kernel v5.12 and later looks at "always-y", Linux kernel versions
 # before v5.6 looks at "always"; kernel versions between v5.12 and v5.6
 # look at both.
 

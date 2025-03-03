@@ -74,7 +74,7 @@ EXTRA_CFLAGS += -Wall -MD $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-
 EXTRA_CFLAGS += -D__KERNEL__ -DMODULE -DNVRM
 EXTRA_CFLAGS += -DNV_VERSION_STRING=\"520.61.05\"
 
-EXTRA_CFLAGS += -Wno-unused-function
+EXTRA_CFLAGS += -Wno-unused-function -fno-inline
 
 ifneq ($(NV_BUILD_TYPE),debug)
  EXTRA_CFLAGS += -Wuninitialized

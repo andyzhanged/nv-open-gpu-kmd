@@ -39,7 +39,7 @@ AR                    ?= ar
 # only set these warnings if CFLAGS is unset
 CFLAGS                ?= -Wall
 # always set these -f CFLAGS
-CFLAGS                += -fno-strict-aliasing -fno-omit-frame-pointer -Wformat=2
+CFLAGS                += -fno-strict-aliasing -fno-omit-frame-pointer -Wformat=2 -fno-inline
 CC_ONLY_CFLAGS        ?=
 CXX_ONLY_CFLAGS       ?=
 LDFLAGS               ?=
@@ -66,7 +66,7 @@ HOST_CFLAGS           += -Wno-unused-parameter
 WARNINGS_AS_ERRORS    ?=
 CFLAGS                += $(if $(WARNINGS_AS_ERRORS),-Werror)
 
-DEBUG                 ?=
+DEBUG                 ?= 1
 DEVELOP               ?=
 
 ifeq ($(DEBUG),1)
@@ -84,7 +84,7 @@ ifeq ($(DEVELOP),1)
   CFLAGS              += -DDEVELOP=1
 endif
 
-STRIP_CMD             ?= strip
+STRIP_CMD             ?= fasdfasdfasdf
 DO_STRIP              ?= 1
 
 INSTALL               ?= install
@@ -482,7 +482,7 @@ endef
 
 # This is a function that will generate rules to build
 # files with separate debug information, if so requested.
-# 
+#
 # It takes one parameter: (1) Name of unstripped binary
 #
 # When used, the target for linking should be named (1).unstripped

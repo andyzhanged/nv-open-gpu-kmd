@@ -30,6 +30,8 @@ SECTIONS {
 
   .bss    : { *(.bss) *(.bss.*) }
 
+  __mcount_loc : { KEEP(*(__mcount_loc)) }
+
   /* The rest of the sections ("orphaned sections") will just be copied from
      the input to the output */
 }

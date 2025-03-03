@@ -120,6 +120,12 @@ CFLAGS += -fdata-sections
 NV_KERNEL_O_LDFLAGS += --gc-sections
 EXPORTS_LINK_COMMAND = exports_link_command.txt
 
+CFLAGS += -pg
+CFLAGS += -mfentry
+CFLAGS += -mrecord-mcount
+CFLAGS += -fno-omit-frame-pointer
+CFLAGS += -fno-optimize-sibling-calls
+
 CONDITIONAL_CFLAGS += $(call TEST_CC_ARG, -fcf-protection=none)
 
 ifeq ($(TARGET_ARCH),x86_64)
