@@ -142,6 +142,8 @@ static NV_STATUS uvm_pte_buffer_get(uvm_pte_buffer_t *pte_buffer,
     UVM_ASSERT(IS_ALIGNED(map_size, pte_buffer->page_size));
 
     pte_offset = uvm_div_pow2_64(map_offset, pte_buffer->page_size);
+
+    /* num_ptes is 512 when cudaMalloc(&temp, 1G)*/
     num_ptes = uvm_div_pow2_64(map_size, pte_buffer->page_size);
 
     UVM_ASSERT(num_ptes <= pte_buffer->buffer_size / pte_buffer->pte_size);
@@ -174,6 +176,7 @@ static NV_STATUS uvm_pte_buffer_get(uvm_pte_buffer_t *pte_buffer,
                                                                          &pte_buffer->mapping_info));
     }
     else {
+        /*构造pte*/
         status = uvm_rm_locked_call(nvUvmInterfaceGetExternalAllocPtes(gpu_va_space->duped_gpu_va_space,
                                                                        mem_handle,
                                                                        map_offset,
@@ -299,13 +302,19 @@ static NV_STATUS map_rm_pt_range(uvm_page_tree_t *tree,
 
     addr = map_start;
     ptes_left = (size_t)uvm_div_pow2_64(uvm_page_table_range_size(pt_range), page_size);
+
     while (addr < end) {
         NvU64 *pte_bits;
 
         num_ptes = min(max_ptes, ptes_left);
         map_size = num_ptes * page_size;
         UVM_ASSERT(addr + map_size <= end + 1);
-
+        /*
+        * 根据传入的mem_handle，构造 pte
+        * 这里让我有点困惑，为什么不是直接用父函数UvmGpuMemoryInfo *mem_info中的pa，而要在根据mem_hanle查找一次？
+        * 也许为了处理 p2p等复杂场景？
+        * 从打印看，申请到的物理地址为 54400000，构造出的pte为 600000005440001。
+        */
         status = uvm_pte_buffer_get(pte_buffer, mem_handle, map_offset, map_size, &pte_bits);
         if (status != NV_OK)
             return status;
@@ -316,6 +325,8 @@ static NV_STATUS map_rm_pt_range(uvm_page_tree_t *tree,
         // which issues the TLB invalidate and thus must wait for all others.
         // However, since each copy will saturate the bus anyway we force them
         // to serialize to avoid bus contention.
+
+        /*将物理地址填入到pte中, pte_addr 为pte的地址，pte_bit为pte_addr中物理地址*/
         status = copy_ptes(tree,
                            page_size,
                            pte_addr,
@@ -330,6 +341,7 @@ static NV_STATUS map_rm_pt_range(uvm_page_tree_t *tree,
         ptes_left -= num_ptes;
         pte_addr.address += num_ptes * pte_size;
         addr += map_size;
+        // printk("pte.address %lx addr %lx pte_bits %lx\n", pte_addr.address, addr, *pte_bits);
         map_offset += map_size;
     }
 
@@ -611,6 +623,7 @@ static NV_STATUS uvm_create_external_range(uvm_va_space_t *va_space, UVM_CREATE_
     // Create the new external VA range.
     // uvm_va_range_create_external handles any collisions when it attempts to
     // insert the new range into the va_space range tree.
+    /*params->base 用户态mmap出来的虚拟地址空间，params->length 为长度*/
     status = uvm_va_range_create_external(va_space, mm, params->base, params->length, &va_range);
     if (status != NV_OK) {
         UVM_DBG_PRINT_RL("Failed to create external VA range [0x%llx, 0x%llx)\n",
@@ -802,6 +815,8 @@ static NV_STATUS uvm_unmap_external_in_range(uvm_va_range_t *va_range,
     //      splits. This means it can't use safe iterators as they will skip the
     //      newly created uvm_ext_gpu_map_t.
     ext_map = uvm_ext_gpu_map_iter_first(va_range, gpu, start, end);
+
+    /*no go into while loop when cudaMalloc or cudaHostRegister*/
     while (ext_map) {
         if (start > ext_map->node.start) {
             status = uvm_ext_gpu_map_split(&range_tree->tree, ext_map, start - 1, &ext_map_next);
@@ -865,6 +880,9 @@ static NV_STATUS uvm_map_external_allocation_on_gpu(uvm_va_range_t *va_range,
 
     // Insert the ext_gpu_map into the VA range immediately since some of the
     // below calls require it to be there.
+    /*
+    * base 为umd传入的gpu va， length为长度。
+    */
     ext_gpu_map->node.start = base;
     ext_gpu_map->node.end = base + length - 1;
     RB_CLEAR_NODE(&ext_gpu_map->node.rb_node);
@@ -892,6 +910,10 @@ static NV_STATUS uvm_map_external_allocation_on_gpu(uvm_va_range_t *va_range,
     // Dup the memory. This verifies the input handles, takes a ref count on the
     // physical allocation so it can't go away under us, and returns us the
     // allocation info.
+
+    /*
+    * 获取物理地址和长度，填充到mem_info中,物理地址在nvdia.ko中分配。
+    */
     status = uvm_rm_locked_call(nvUvmInterfaceDupMemory(uvm_gpu_device_handle(mapping_gpu),
                                                         user_rm_mem->user_client,
                                                         user_rm_mem->user_object,
@@ -941,7 +963,7 @@ static NV_STATUS uvm_map_external_allocation(uvm_va_space_t *va_space, UVM_MAP_E
     {
         .rm_control_fd = params->rmCtrlFd,
         .user_client   = params->hClient,
-        .user_object   = params->hMemory
+        .user_object   = params->hMemory  /*memory handle input by umd*/
     };
     uvm_tracker_t tracker = UVM_TRACKER_INIT();
 
@@ -962,6 +984,9 @@ static NV_STATUS uvm_map_external_allocation(uvm_va_space_t *va_space, UVM_MAP_E
     }
 
     uvm_processor_mask_zero(&mapped_gpus);
+    /*
+    * for循环是支持多个gpu建立页表映射
+    */
     for (i = 0; i < params->gpuAttributesCount; i++) {
         if (uvm_api_mapping_type_invalid(params->perGpuAttributes[i].gpuMappingType) ||
             uvm_api_caching_type_invalid(params->perGpuAttributes[i].gpuCachingType) ||
@@ -987,6 +1012,13 @@ static NV_STATUS uvm_map_external_allocation(uvm_va_space_t *va_space, UVM_MAP_E
         map_rm_params.format_type = params->perGpuAttributes[i].gpuFormatType;
         map_rm_params.element_bits = params->perGpuAttributes[i].gpuElementBits;
         map_rm_params.compression_type = params->perGpuAttributes[i].gpuCompressionType;
+
+        /*params->base 为映射时的虚拟地址，如0x7fff40000000，
+        * 经过试验证实，由用户态调用mmap申请，且每次cudaMalloc都会申请，和天数
+        * 的预先mmap分配大pool，在细分。nv的做法更合理，按需分配。
+        * 但奇怪的是，通过trace-bpfcc查看do_mmap的长度时，len比cudaMalloc的size要长。
+        * 另外nv的mmap，是MAP_GROWSDOWN，由高地址向低地址增长。
+        * */
         status = uvm_map_external_allocation_on_gpu(va_range,
                                                     mapping_gpu,
                                                     &user_rm_mem,
@@ -1182,8 +1214,9 @@ static uvm_gpu_t *uvm_ext_gpu_map_free_internal(uvm_ext_gpu_map_t *ext_gpu_map)
 
     UVM_ASSERT(!ext_gpu_map->pt_range_vec.ranges);
 
-    if (ext_gpu_map->mem_handle)
+    if (ext_gpu_map->mem_handle){
         nv_kref_put(&ext_gpu_map->mem_handle->ref_count, uvm_release_rm_handle);
+    }
 
     owning_gpu = ext_gpu_map->owning_gpu;
     uvm_kvfree(ext_gpu_map);
@@ -1239,6 +1272,8 @@ void uvm_ext_gpu_map_destroy(uvm_va_range_t *va_range,
     if (deferred_free_list && ext_gpu_map->mem_handle) {
         // If this is a GPU allocation, we have to prevent that GPU from going
         // away until we've freed the handle.
+
+       /*code into this path*/
         if (ext_gpu_map->owning_gpu)
             uvm_gpu_retain(ext_gpu_map->owning_gpu);
 
@@ -1321,7 +1356,6 @@ static NV_STATUS uvm_free(uvm_va_space_t *va_space, NvU64 base, NvU64 length)
     NV_STATUS status = NV_OK;
     uvm_global_processor_mask_t retained_mask;
     LIST_HEAD(deferred_free_list);
-
     if (uvm_api_range_invalid_4k(base, length))
         return NV_ERR_INVALID_ADDRESS;
 

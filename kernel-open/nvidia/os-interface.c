@@ -678,7 +678,7 @@ NV_STATUS NV_API_CALL os_get_current_thread(NvU64 *threadId)
 /*******************************************************************************/
 
 // The current debug display level (default to maximum debug level)
-NvU32 cur_debuglevel = 0xffffffff;
+NvU32 cur_debuglevel = 0;
 
 /*
  * The binary core of RM (nv-kernel.o) calls both out_string, and nv_printf.
@@ -1577,7 +1577,7 @@ NV_STATUS NV_API_CALL os_alloc_pages_node
      *                              instead).
      *
      * 6. (Optional) __GFP_RECLAIM: Used to allow/forbid reclaim.
-     *                              This is part of GFP_USER and consequently 
+     *                              This is part of GFP_USER and consequently
      *                              GFP_HIGHUSER_MOVABLE.
      *
      * Some of these flags are relatively more recent, with the last of them

@@ -338,9 +338,9 @@ void NVRM_PRINTF_FUNCTION(const char *file,
 #endif
 
 #if NV_PRINTF_STRINGS_ALLOWED
-#define NV_PRINTF_LEVEL  LEVEL_INFO
+#define NV_PRINTF_LEVEL  0
 #else
-#define NV_PRINTF_LEVEL  LEVEL_NOTICE
+#define NV_PRINTF_LEVEL  0
 #endif
 
 /**

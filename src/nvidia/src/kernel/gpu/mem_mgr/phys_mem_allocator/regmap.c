@@ -765,6 +765,8 @@ pmaRegmapRead(void *pMap, NvU64 frameNum, NvBool readAttrib)
 // Note that these functions only return the free regions but doesn't reserve them
 // therefore locks should not be released after they return until you mark them allocated
 //
+
+/*该函数从内存池中，分配一段连续的内存，但从上面英文注释看，并没有标记为分配*/
 NV_STATUS
 pmaRegmapScanContiguous
 (
@@ -813,7 +815,7 @@ pmaRegmapScanContiguous
     freeStart = localStart;
     found = 0;
 
-    NV_PRINTF(LEVEL_INFO,
+    NV_PRINTF(5,
               "Scanning with addrBase 0x%llx in frame range 0x%llx..0x%llx, pages to allocate 0x%llx\n",
               addrBase, localStart, localEnd, numPages);
 
@@ -835,6 +837,7 @@ pmaRegmapScanContiguous
                 NvS64 diff = _pmaRegmapAvailable(pRegmap, freeStart, (freeStart + numFrames - 1));
                 if (diff == ALL_FREE)
                 {
+                    /* 找到内存区间，但并未标记该内存区间为已分配*/
                     found = NV_TRUE;
                     *freeList = addrBase + (freeStart << PMA_PAGE_SHIFT);
                     *numPagesAlloc = numPages;

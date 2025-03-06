@@ -3102,6 +3102,7 @@ nvGpuOpsBuildExternalAllocPtes
     vol = nvGpuOpsGetExternalAllocVolatility(pMemDesc, aperture, isIndirectPeerSupported,
                                              pGpuExternalMappingInfo->cachingType);
 
+    /* 根据umd入参，决定映射的属性，read only ， atomic*/
     status = nvGpuOpsGetExternalAllocMappingAttribute(pGpuExternalMappingInfo->mappingType,
                                                       pMemDesc,
                                                       &readOnly,
@@ -3117,12 +3118,14 @@ nvGpuOpsBuildExternalAllocPtes
 
     skipPteCount = pLevelFmt->entrySize / sizeof(NvU64);
 
+    /*isCompressedKind is 0 when cudaMalloc*/
     isCompressedKind = memmgrIsKind_HAL(pMemoryManager, FB_IS_KIND_COMPRESSIBLE, kind);
 
     pteCount = NV_MIN((pGpuExternalMappingInfo->pteBufferSize / pLevelFmt->entrySize), (mappingSize / pageSize));
     if (!pteCount)
         return NV_ERR_BUFFER_TOO_SMALL;
 
+    /*pFmt version is 2 on a30 when cudaMalloc*/
     if (pFmt->version == GMMU_FMT_VERSION_3)
     {
         NvU32 ptePcfSw  = 0;
@@ -3225,6 +3228,8 @@ nvGpuOpsBuildExternalAllocPtes
     // it requires IOMMU mappings to be set up and these are different for each
     // GPU. The IOMMU mappings are currently added by nvGpuOpsDupMemory().
     //
+
+    /*获取物理地址*/
     memdescGetPhysAddrsForGpu(pMemDesc, pMappingGpu, AT_GPU, offset, pageSize, pteCount, physicalAddresses);
     kgmmuEncodePhysAddrs(pKernelGmmu, aperture, physicalAddresses, fabricBaseAddress, pteCount);
 
@@ -3270,12 +3275,13 @@ nvGpuOpsBuildExternalAllocPtes
 
     for (iter = 0; iter < pteCount; iter++)
     {
+        /*physAddr 为分配的物理地址，每个循环已2M增长*/
         physAddr = physicalAddresses[iter];
 
+        /*打印显示，phyAddr 为91200000， pte.v64为91200001，仅仅是将最后一个bit置为1*/
         gmmuFieldSetAddress(gmmuFmtPtePhysAddrFld(pPteFmt, aperture),
                             physAddr,
                             pte.v8);
-
         if (isCompressedKind)
         {
             // We have to reset pte.v8 fields in care of partially compressed allocations

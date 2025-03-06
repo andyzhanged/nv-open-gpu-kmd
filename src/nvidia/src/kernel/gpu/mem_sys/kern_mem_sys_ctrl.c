@@ -369,9 +369,11 @@ _fbGetFbInfos(OBJGPU *pGpu, NvHandle hClient, NvHandle hObject, NV2080_CTRL_FB_I
             {
                 if (bIsPmaEnabled)
                 {
+                    /*get total memory when nvidia-smi*/
                     pmaGetTotalMemory(&pHeap->pmaObject, &bytesTotal);
                     NV_ASSERT(NvU64_HI32(bytesTotal >> 10) == 0);
                     data = NvU64_LO32(bytesTotal >> 10);
+                    NV_PRINTF(5, "3333333  heap size %lx\n", data);
                 }
                 else
                 {
@@ -494,6 +496,7 @@ _fbGetFbInfos(OBJGPU *pGpu, NvHandle hClient, NvHandle hObject, NV2080_CTRL_FB_I
                     pmaGetTotalMemory(&pHeap->pmaObject, &bytesTotal);
                     NV_ASSERT(NvU64_HI32(bytesTotal >> 10) == 0);
                     heapSizeKb = NvU64_LO32(bytesTotal >> 10);
+                    NV_PRINTF(5, "44444444  heap size %lx\n", heapSizeKb);
 
                     data = memmgrGetMappableRamSizeMb(pMemoryManager) << 10;
                     if (data > heapSizeKb)

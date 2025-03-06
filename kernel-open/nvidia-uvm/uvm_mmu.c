@@ -276,6 +276,8 @@ static uvm_page_directory_t *allocate_directory(uvm_page_tree_t *tree,
     NV_STATUS status;
     uvm_mmu_mode_hal_t *hal = tree->hal;
     NvU32 entry_count;
+
+    /*phys_alloc_size is 4K when cudaMalloc*/
     NvLength phys_alloc_size = hal->allocation_size(depth, page_size);
     uvm_page_directory_t *dir;
 
@@ -290,6 +292,7 @@ static uvm_page_directory_t *allocate_directory(uvm_page_tree_t *tree,
     if (dir == NULL)
         return NULL;
 
+    /*申请pde物理内存*/
     status = phys_mem_allocate(tree, phys_alloc_size, tree->location, pmm_flags, &dir->phys_alloc);
 
     // Fall back to sysmem if allocating page tables in vidmem with eviction
@@ -325,10 +328,10 @@ static inline NvU32 index_to_entry(uvm_mmu_mode_hal_t *hal, NvU32 entry_index, N
 // the same mapping, i.e., with the same physical address (phys_addr).
 static void pde_fill(uvm_page_tree_t *tree,
                      NvU32 depth,
-                     uvm_mmu_page_table_alloc_t *directory,
+                     uvm_mmu_page_table_alloc_t *directory, /*当前pde*/
                      NvU32 start_index,
                      NvU32 pde_count,
-                     uvm_mmu_page_table_alloc_t **phys_addr,
+                     uvm_mmu_page_table_alloc_t **phys_addr, /*待填入当前pde的下一级pde物理地址*/
                      uvm_push_t *push)
 {
     NvU64 pde_data[2], entry_size;
@@ -338,11 +341,13 @@ static void pde_fill(uvm_page_tree_t *tree,
     entry_size = tree->hal->entry_size(depth);
     UVM_ASSERT(sizeof(pde_data) >= entry_size);
 
+    /* 构造pde，低位填写 attribute */
     tree->hal->make_pde(pde_data, phys_addr, depth);
     pde_entry_addr = uvm_gpu_address_from_phys(directory->addr);
     pde_entry_addr.address += start_index * entry_size;
-
+    // printk("directory pa %llx pde_entry_addr %lx depth %u entry_size %ld\n", directory->addr.address, pde_entry_addr.address, depth, entry_size);
     if (entry_size == sizeof(pde_data[0])) {
+        /* call function uvm_hal_maxwell_ce_memset_8 on a30 */
         tree->gpu->parent->ce_hal->memset_8(push, pde_entry_addr, pde_data[0], sizeof(pde_data[0]) * pde_count);
     }
     else {
@@ -549,6 +554,7 @@ static NV_STATUS write_gpu_state(uvm_page_tree_t *tree,
         // be enabled as they are all independent and we just did a WFI above.
         uvm_push_set_flag(&push, UVM_PUSH_FLAG_CE_NEXT_PIPELINED);
         uvm_push_set_flag(&push, UVM_PUSH_FLAG_NEXT_MEMBAR_NONE);
+        /*写入pde*/
         pde_write(tree, dir->host_parent, dir->index_in_parent, false, &push);
 
         // If any of the written PDEs is in sysmem, a sysmembar is needed before
@@ -632,7 +638,6 @@ static NV_STATUS map_remap_init(uvm_page_tree_t *tree)
     uvm_push_t push;
     uvm_pte_batch_t batch;
     NvU32 entry_size;
-
     // Allocate the ptes_invalid_4k.
     status = allocate_page_table(tree, UVM_PAGE_SIZE_4K, &tree->map_remap.ptes_invalid_4k);
     if (status != NV_OK)
@@ -647,6 +652,7 @@ static NV_STATUS map_remap_init(uvm_page_tree_t *tree)
         if (status != NV_OK)
             goto error;
     }
+
     status = page_tree_begin_acquire(tree, &tree->tracker, &push, "map remap init");
     if (status != NV_OK)
         goto error;
@@ -979,11 +985,12 @@ static NV_STATUS try_get_ptes(uvm_page_tree_t *tree,
     uvm_mmu_mode_hal_t *hal = tree->hal;
 
     // bit index just beyond the most significant bit used to index the current entry
+    // 49 on nv a30
     NvU32 addr_bit_shift = hal->num_va_bits();
 
     // track depth upon which the invalidate occured
     NvS32 invalidate_depth = -1;
-    uvm_page_directory_t *dir = tree->root;
+    uvm_page_directory_t *dir = tree->root; /*根目录*/
 
     // directories used in attempt
     NvU32 used_count = 0;
@@ -1017,14 +1024,18 @@ static NV_STATUS try_get_ptes(uvm_page_tree_t *tree,
         NvU32 index_bits = hal->index_bits(dir->depth, page_size);
 
         addr_bit_shift -= index_bits;
+        // printk("index_bit %u, addr_bit_shift %u\n", index_bits, addr_bit_shift);
+        /*根据va和curr page depth计算index*/
         start_index = entry_index_from_vaddr(start, addr_bit_shift, index_bits);
         end_index = entry_index_from_vaddr(start + size - 1, addr_bit_shift, index_bits);
-
+        // printk("start %lx start_index %lx end_index %lx depth %u\n", start, start_index, end_index, dir->depth);
         UVM_ASSERT(start_index <= end_index && end_index < (1 << index_bits));
 
+        /*找出下一级页表*/
         entry = dir->entries + index_to_entry(hal, start_index, dir->depth, page_size);
 
         if (dir->depth == hal->page_table_depth(page_size)) {
+            /*go when depth = 3 */
             page_table_range_init(range, page_size, dir, start_index, end_index);
             break;
         }
@@ -1042,14 +1053,14 @@ static NV_STATUS try_get_ptes(uvm_page_tree_t *tree,
                     return NV_ERR_MORE_PROCESSING_REQUIRED;
                 }
 
-                *entry = host_pde_write(dir_cache[dir->depth], dir, start_index);
+                *entry = host_pde_write(dir_cache[dir->depth], dir, start_index);  /*将下一级pde填入parent pde中*/
                 dirs_used[used_count++] = *entry;
 
                 if (invalidate_depth == -1)
                     invalidate_depth = dir->depth;
             }
         }
-        dir = *entry;
+        dir = *entry;  /*更新为下一级的pde*/
     }
 
     free_unused_directories(tree, used_count, dirs_used, dir_cache);
@@ -1137,6 +1148,8 @@ NV_STATUS uvm_page_tree_get_ptes_async(uvm_page_tree_t *tree,
         // try_get_ptes never needs depth 0, so store a directory at its parent's depth
         // TODO: Bug 1766655: Allocate everything below cur_depth instead of
         //       retrying for every level.
+
+        /*申请下一级pde*/
         dir_cache[cur_depth] = allocate_directory(tree, page_size, cur_depth + 1, pmm_flags);
         if (dir_cache[cur_depth] == NULL) {
             uvm_mutex_lock(&tree->lock);
@@ -1144,7 +1157,7 @@ NV_STATUS uvm_page_tree_get_ptes_async(uvm_page_tree_t *tree,
             uvm_mutex_unlock(&tree->lock);
             return NV_ERR_NO_MEMORY;
         }
-
+        printk("allocte pde %lx cur_depth %d\n", dir_cache[cur_depth], cur_depth);
         uvm_mutex_lock(&tree->lock);
     }
 
@@ -1333,9 +1346,14 @@ out:
 
 static size_t range_vec_calc_range_count(uvm_page_table_range_vec_t *range_vec)
 {
+    /*pde_coverage = 512M on a30*/
     NvU64 pde_coverage = uvm_mmu_pde_coverage(range_vec->tree, range_vec->page_size);
+
+    /*aligned_start 和aligned_end 是va的start和end*/
     NvU64 aligned_start = UVM_ALIGN_DOWN(range_vec->start, pde_coverage);
     NvU64 aligned_end = UVM_ALIGN_UP(range_vec->start + range_vec->size, pde_coverage);
+
+    /* 申请1G时，count是1G/512M = 2*/
     size_t count = uvm_div_pow2_64(aligned_end - aligned_start, pde_coverage);
 
     UVM_ASSERT(count != 0);
@@ -1392,6 +1410,8 @@ NV_STATUS uvm_page_table_range_vec_init(uvm_page_tree_t *tree,
     range_vec->page_size = page_size;
     range_vec->start = start;
     range_vec->size = size;
+
+    /*range_count是需要的pde数目，以1G为例，range_count是2*/
     range_vec->range_count = range_vec_calc_range_count(range_vec);
 
     range_vec->ranges = uvm_kvmalloc_zero(sizeof(*range_vec->ranges) * range_vec->range_count);
@@ -1400,6 +1420,7 @@ NV_STATUS uvm_page_table_range_vec_init(uvm_page_tree_t *tree,
         goto out;
     }
 
+    /*有多少个pde，循环多少次，cudaMalloc时每次va增长为512M*/
     for (i = 0; i < range_vec->range_count; ++i) {
         uvm_page_table_range_t *range = &range_vec->ranges[i];
 

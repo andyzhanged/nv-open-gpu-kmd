@@ -73,6 +73,8 @@ static const RmVidHeapControlEntry rmVidHeapControlTable[] = {
 
 static NvU32 rmVidHeapControlTableSize = sizeof(rmVidHeapControlTable) / sizeof(rmVidHeapControlTable[0]);
 
+extern int nv_printf(NvU32 debuglevel, const char *printf_format, ...);
+
 void
 RmDeprecatedVidHeapControl
 (
@@ -103,6 +105,7 @@ RmDeprecatedVidHeapControl
     }
 
     // issue the call
+    /*pFunc is _nvos32FunctionAllocSize or _nvos32FunctionAllocOsDesc when cudaMalloc*/
     status = rmVidHeapControlTable[i].pFunc(pContext, pArgs);
 
 done:
@@ -236,6 +239,8 @@ _nvos32FunctionAllocSize
         allocParams.rangeHi    = 0;
     }
 
+    nv_printf(0, "pArgs->data.AllocSize.size %lx\n", pArgs->data.AllocSize.size);
+
 #define ALLOC_SIZE_PARAMS(_IN, _IN_OUT) \
     _IN(owner, AllocSize.owner) \
     _IN(type, AllocSize.type) \
@@ -259,6 +264,12 @@ _nvos32FunctionAllocSize
     pArgs->data.AllocSize.partitionStride = 256;
 
     // get memory
+    /* pArgs->data.AllocSize.hMemory 是用户态传入的memory handle
+    * 如果用户态传入，则使用，否则kmd生成。
+    */
+
+    nv_printf(0, "before pArgs->data.AllocSize.size %lx hMemory %d\n",
+        pArgs->data.AllocSize.size, pArgs->data.AllocSize.hMemory);
     status = _rmVidHeapControlAllocCommon(pContext,
                                           pArgs,
                                           pArgs->hRoot,
@@ -267,7 +278,8 @@ _nvos32FunctionAllocSize
                                           &allocParams);
 
     ALLOC_SIZE_PARAMS(_NO_COPY, _COPY_OUT);
-
+    nv_printf(0, "return pArgs->data.AllocSize.size %lx hMemory %d\n",
+        pArgs->data.AllocSize.size, pArgs->data.AllocSize.hMemory);
     return status;
 }
 

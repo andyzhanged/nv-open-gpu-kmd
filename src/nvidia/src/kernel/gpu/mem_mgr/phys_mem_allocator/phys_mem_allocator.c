@@ -494,6 +494,8 @@ pmaRegisterRegion
 
     numFrames = (physLimit - physBase + 1) >> PMA_PAGE_SHIFT;
 
+    NV_PRINTF(5, "pmaRegisterRegion numFrames %lx, physBase %llx\n",numFrames, physBase);
+
     pMap = pPma->pMapInfo->pmaMapInit(numFrames, physBase, &pPma->pmaStats,
                                       pRegionDesc->bProtected);
     if (pMap == NULL)
@@ -769,7 +771,7 @@ pmaAllocatePages_retry:
                                   (allocationOptions->physBegin - addrBase) : 0) : 0;
         rangeEnd   = rangeFlag ? ((allocationOptions->physEnd >= addrBase) ?
                                   (allocationOptions->physEnd - addrBase) : 0) : 0;
-
+        NV_PRINTF(5, "addrBase %llx addrLimit %llx rangeStart %llx rangeEnd %llx regionIdx %d\n", addrBase, addrLimit, rangeStart, rangeEnd, regionIdx);
         if (rangeStart > rangeEnd)
         {
             status = NV_ERR_INVALID_ARGUMENT;
@@ -866,7 +868,7 @@ pmaAllocatePages_retry:
         }
         else if (tryEvict)
         {
-            NV_PRINTF(LEVEL_INFO, "Status evictable, region before eviction:\n");
+            NV_PRINTF(5, "Status evictable, region before eviction:\n");
             pmaRegionPrint(pPma, pPma->pRegDescriptors[regId], pMap);
 
             NV_ASSERT(numPagesLeftToAllocate > 0);
@@ -910,7 +912,7 @@ pmaAllocatePages_retry:
                     NV_ASSERT(evictPhysBegin <= evictPhysEnd);
                 }
 
-                NV_PRINTF(LEVEL_INFO, "Attempt %s eviction of 0x%llx pages of size 0x%x, "
+                NV_PRINTF(5, "Attempt %s eviction of 0x%llx pages of size 0x%x, "
                                       "(0x%x frames per page), in the frame range 0x%llx..0x%llx\n",
                                       contigFlag ? "contiguous" : "discontiguous",
                                       numPagesLeftToAllocate,
@@ -1065,12 +1067,16 @@ pmaAllocatePages_retry:
             addrBase = pPma->pRegDescriptors[regId]->base;
             frameBase = PMA_ADDR2FRAME(pPages[0], addrBase);
 
-            NV_PRINTF(LEVEL_INFO, "Successfully allocated frames 0x%llx through 0x%llx\n",
+            /*pPages[0] 中记载了分配到的物理地址*/
+            NV_PRINTF(5, "Successfully allocated frames 0x%llx through 0x%llx pPages %lx\n",
                                   frameBase,
-                                  frameBase + numFramesAllocated - 1);
+                                  frameBase + numFramesAllocated - 1, *pPages);
 
             for (i = 0; i < numPagesAllocatedSoFar; i++)
             {
+                /* call pmaRegmapChangeStateAttrib 将申请到的内存标记为已申请，
+                * 即更改内存池中的flag，标记为已分配。
+                */
                 pPma->pMapInfo->pmaMapChangePageStateAttrib(pMap, frameBase + (i * framesPerPage),
                                                             pageSize, pinOption, NV_TRUE);
             }
@@ -1094,7 +1100,7 @@ pmaAllocatePages_retry:
             (void)frameRangeStart;   //Silence the compiler
             (void)lastFrameRangeEnd;
 
-            NV_PRINTF(LEVEL_INFO, "Successfully allocated frames:\n");
+            NV_PRINTF(5, "Successfully allocated frames:\n");
 
             for (i = 0; i < numPagesAllocatedSoFar; i++)
             {
@@ -1111,7 +1117,7 @@ pmaAllocatePages_retry:
                 else if ((lastFrameRangeEnd + 1) != frameBase)
                 {
                     // Break in frame range detected
-                    NV_PRINTF(LEVEL_INFO, "0x%llx through 0x%llx \n",
+                    NV_PRINTF(5, "0x%llx through 0x%llx \n",
                                           frameRangeStart,
                                           lastFrameRangeEnd);
 
@@ -1123,7 +1129,7 @@ pmaAllocatePages_retry:
                                                             pageSize, pinOption, NV_TRUE);
 
             }
-            NV_PRINTF(LEVEL_INFO, "0x%llx through 0x%llx \n",
+            NV_PRINTF(5, "0x%llx through 0x%llx \n",
                                   frameRangeStart,
                                   frameBase + framesPerPage - 1);
         }
@@ -1605,7 +1611,7 @@ pmaGetFreeMemory
     portSyncSpinlockAcquire(pPma->pPmaLock);
 
     *pBytesFree = pPma->pmaStats.numFreeFrames << PMA_PAGE_SHIFT;
-
+    NV_PRINTF(5, "Free Memory %lx\n", *pBytesFree);
     portSyncSpinlockRelease(pPma->pPmaLock);
 }
 
@@ -1629,6 +1635,7 @@ pmaGetTotalMemory
 
         *pBytesTotal += totalBytesInRegion;
     }
+    NV_PRINTF(5, "Total Memory %lx\n", *pBytesTotal);
 }
 
 NV_STATUS
@@ -1953,6 +1960,8 @@ pmaGetTotalUnprotectedMemory
     *pBytesTotal = 0;
 
     pmaGetTotalMemory(pPma, &totalBytesOverall);
+    NV_PRINTF(LEVEL_ERROR, "pmaGetTotalUnprotectedMemory heap size %lx\n", totalBytesOverall);
+
     pmaGetTotalProtectedMemory(pPma, &totalBytesInProtectedRegion);
 
     NV_ASSERT_OR_RETURN_VOID(totalBytesOverall >= totalBytesInProtectedRegion);

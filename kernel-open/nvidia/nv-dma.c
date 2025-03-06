@@ -225,6 +225,7 @@ NV_STATUS nv_map_dma_map_scatterlist(nv_dma_map_t *dma_map)
     nv_dma_submap_t *submap;
     NvU64 i;
 
+    /*nv为了解决amd iommu驱动的bug，将dma_map分为了submap，每个submap为4G*/
     NV_FOR_EACH_DMA_SUBMAP(dma_map, submap, i)
     {
         /* Imported SGTs will have already been mapped by the exporter. */
@@ -565,7 +566,6 @@ NV_STATUS NV_API_CALL nv_dma_map_pages(
          * overhead.
          */
         dma_map->contiguous = NV_TRUE;
-
         status = nv_dma_map_contig(dma_dev, dma_map, va_array);
     }
 
@@ -717,6 +717,7 @@ NV_STATUS NV_API_CALL nv_dma_map_alloc
     }
 
     *priv = pages;
+
     status = nv_dma_map_pages(dma_dev, page_count, va_array, contig, cache_type,
                               priv);
     if (status != NV_OK)

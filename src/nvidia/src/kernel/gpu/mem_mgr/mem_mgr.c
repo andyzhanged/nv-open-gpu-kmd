@@ -132,7 +132,7 @@ _memmgrInitRegistryOverrides(OBJGPU *pGpu, MemoryManager *pMemoryManager)
     {
         pMemoryManager->bScrubOnFreeEnabled = NV_FALSE;
     }
-    
+
     if ((osReadRegistryDword(pGpu, NV_REG_STR_RM_DISABLE_FAST_SCRUBBER,
                              &data32) == NV_OK) && data32)
     {
@@ -568,6 +568,7 @@ memmgrCreateHeap_IMPL
     // Calculate the FB heap size as the address space size, then deduct any reserved memory
     //
     size = pMemoryManager->Ram.fbAddrSpaceSizeMb << 20;
+
     size -= NV_MIN(size, rsvdSize);
 
     if((size != 0) || (pMemoryManager->bScanoutSysmem))
@@ -580,7 +581,7 @@ memmgrCreateHeap_IMPL
 
         pMemoryManager->pHeap = newHeap;
 
-        if (memmgrIsPmaEnabled(pMemoryManager) && 
+        if (memmgrIsPmaEnabled(pMemoryManager) &&
             memmgrIsPmaSupportedOnPlatform(pMemoryManager))
         {
             portMemSet(&pMemoryManager->pHeap->pmaObject, 0, sizeof(pMemoryManager->pHeap->pmaObject));
@@ -1308,13 +1309,13 @@ memmgrAllocateConsoleRegion_IMPL
 
     NV_STATUS status     = NV_OK;
     NvU32     consoleRegionId = 0x0;
-    NvU64     regionSize; 
-    
+    NvU64     regionSize;
+
     if (pMemoryManager->Ram.ReservedConsoleDispMemSize > 0)
     {
-        pConsoleFbRegion->base = pMemoryManager->Ram.fbRegion[consoleRegionId].base; 
+        pConsoleFbRegion->base = pMemoryManager->Ram.fbRegion[consoleRegionId].base;
         pConsoleFbRegion->limit = pMemoryManager->Ram.fbRegion[consoleRegionId].limit;
-        
+
         regionSize = pConsoleFbRegion->limit - pConsoleFbRegion->base + 1;
 
         // Once the console is reserved, we don't expect to reserve it again
@@ -2475,7 +2476,7 @@ memmgrPmaInitialize_IMPL
     NV_STATUS status = NV_OK;
     NvBool bNumaEnabled = osNumaOnliningEnabled(pGpu->pOsGpuInfo);
 
-    NV_ASSERT(memmgrIsPmaEnabled(pMemoryManager) && 
+    NV_ASSERT(memmgrIsPmaEnabled(pMemoryManager) &&
               memmgrIsPmaSupportedOnPlatform(pMemoryManager));
 
     if (memmgrIsPmaForcePersistence(pMemoryManager))
@@ -2520,12 +2521,12 @@ memmgrPmaInitialize_IMPL
         {
             if (numaSkipReclaimVal > NV_REG_STR_RM_NUMA_ALLOC_SKIP_RECLAIM_PERCENTAGE_MAX)
             {
-                numaSkipReclaimVal = NV_REG_STR_RM_NUMA_ALLOC_SKIP_RECLAIM_PERCENTAGE_MAX; 
+                numaSkipReclaimVal = NV_REG_STR_RM_NUMA_ALLOC_SKIP_RECLAIM_PERCENTAGE_MAX;
             }
         }
         pmaNumaSetReclaimSkipThreshold(pPma, numaSkipReclaimVal);
     }
-    
+
     return NV_OK;
 }
 
@@ -3015,7 +3016,7 @@ memmgrReserveMemoryForFsp_IMPL
     //
     // If we sent FSP commands to boot ACR, we need to allocate the surfaces
     // used by FSP and ACR as WPR/FRTS here from the reserved heap
-    //   
+    //
     if (pKernelFsp && (!pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_DISABLE_FRTS_VIDMEM) &&
         (pKernelFsp->getProperty(pKernelFsp, PDB_PROP_KFSP_BOOT_COMMAND_OK))))
     {

@@ -28,7 +28,7 @@
 // 0           PDE3                                48:47
 // 1           PDE2                                46:38
 // 2           PDE1                                37:29
-// 3           PDE0 (dual 64k/4k PDE, or 2M PTE)   28:21
+// 3           PDE0 (dual 64k/4k PDE, or 2M PTE)   28:21  /*a30 页表结构*/
 // 4           PTE_64K / PTE_4K                    20:16 / 20:12
 
 #include "uvm_types.h"
@@ -83,8 +83,8 @@ static NvU64 single_pde_pascal(uvm_mmu_page_table_alloc_t *phys_alloc)
                 UVM_ASSERT_MSG(0, "Invalid aperture: %d\n", phys_alloc->addr.aperture);
                 break;
         }
+        // printk("address %lx make_pde %lx\n", address, pde_bits);
     }
-
     return pde_bits;
 }
 

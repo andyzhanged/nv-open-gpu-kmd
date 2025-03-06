@@ -242,10 +242,17 @@ NV_STATUS NV_API_CALL os_lock_user_pages(
     }
 
     nv_mmap_read_lock(mm);
+
+    /*called when cudaHostRegister*/
     ret = NV_GET_USER_PAGES((unsigned long)address,
                             page_count, write, force, user_pages, NULL);
     nv_mmap_read_unlock(mm);
     pinned = ret;
+
+    for (i = 0; i < page_count; i++)
+    {
+        // printk("page[%ld] phy is %llx\n", i, page_to_pfn(user_pages[i]));
+    }
 
     if (ret < 0)
     {

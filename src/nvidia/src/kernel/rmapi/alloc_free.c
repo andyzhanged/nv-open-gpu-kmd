@@ -1095,7 +1095,7 @@ rmapiAllocWithSecInfo
         (pRmApi->bApiLockInternal || pRmApi->bGpuLockInternal))
         allocInitStates |= RM_ALLOC_STATES_INTERNAL_ALLOC;
 
-    NV_PRINTF(LEVEL_INFO, "client:0x%x parent:0x%x object:0x%x class:0x%x\n",
+    NV_PRINTF(5, "client:0x%x parent:0x%x object:0x%x class:0x%x\n",
               hClient, hParent, *phObject, hClass);
 
     status = _rmAlloc(hClient,
@@ -1124,7 +1124,7 @@ rmapiAllocWithSecInfo
 
     if (status == NV_OK)
     {
-        NV_PRINTF(LEVEL_INFO, "allocation complete\n");
+        NV_PRINTF(5, "allocation complete\n");
     }
     else
     {

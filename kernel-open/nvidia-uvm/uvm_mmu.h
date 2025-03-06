@@ -574,11 +574,16 @@ NV_STATUS uvm_mmu_sysmem_map(uvm_gpu_t *gpu, NvU64 pa, NvU64 size);
 
 static NvU64 uvm_mmu_page_tree_entries(uvm_page_tree_t *tree, NvU32 depth, NvU32 page_size)
 {
+    /* index_bit = index_bits_pascal on nv30 */
     return 1ull << tree->hal->index_bits(depth, page_size);
 }
 
 static NvU64 uvm_mmu_pde_coverage(uvm_page_tree_t *tree, NvU32 page_size)
 {
+    /*
+    * depth is 3 when cudaMalloc, page_size is 2M
+    * depth is 4 when cudaHostRegister, page_size is 4k
+    */
     NvU32 depth = tree->hal->page_table_depth(page_size);
     return uvm_mmu_page_tree_entries(tree, depth, page_size) * page_size;
 }

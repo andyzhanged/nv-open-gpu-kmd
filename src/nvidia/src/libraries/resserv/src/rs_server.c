@@ -20,7 +20,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
+
 #define NVOC_RS_SERVER_H_PRIVATE_ACCESS_ALLOWED
 #include "nvlog_inc.h"
 #include "resserv/resserv.h"
@@ -628,6 +628,9 @@ serverAllocResource
         }
         else
         {
+            /*
+            * cudaMalloc code path go here
+            */
             status = serverLookupSecondClient(pParams, &hSecondClient);
 
             if (status != NV_OK)
@@ -635,6 +638,7 @@ serverAllocResource
 
             if (hSecondClient == 0)
             {
+                /*go here,zhanged*/
                 status = _serverLockClientWithLockInfo(pServer, LOCK_ACCESS_WRITE,
                                                        pParams->hClient, pLockInfo,
                                                        &releaseFlags, &pParams->pClient);
@@ -672,6 +676,7 @@ serverAllocResource
             if (status != NV_OK)
                 goto done;
 
+            /*cudaMalloc alloc go here*/
             status = serverAllocResourceUnderLock(pServer, pParams);
         }
     }
@@ -726,7 +731,7 @@ serverAllocResourceUnderLock
     RsClient   *pClient = pParams->pClient;
     NvHandle    hResource = pParams->hResource;
     NvU32       releaseFlags = 0;
-
+asdfasdfasd
     if (!pServer->bConstructed)
         return NV_ERR_NOT_READY;
 
@@ -2838,7 +2843,7 @@ serverAllocShareWithHalspecParent
     status = objCreateDynamicWithFlags(&pDynamic,
                                        pHalspecParent,
                                        (const NVOC_CLASS_INFO*)(const void*)pClassInfo,
-                                       flags); 
+                                       flags);
     if (status != NV_OK)
         return status;
 

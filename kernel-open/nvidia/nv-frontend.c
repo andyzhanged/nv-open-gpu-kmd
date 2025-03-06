@@ -356,6 +356,7 @@ int nvidia_frontend_mmap(
     nvidia_module_t *module = nv_minor_num_table[minor_num];
 
     if ((module != NULL) && (module->mmap != NULL))
+        /* mmap is nvidia_mmap */
         rc = module->mmap(file, vma);
 
     return rc;

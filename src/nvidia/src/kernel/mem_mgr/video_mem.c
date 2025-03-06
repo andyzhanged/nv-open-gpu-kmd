@@ -140,27 +140,27 @@ _vidmemPmaAllocate
                                      RM_LOCK_MODULES_MEM_PMA);
     NV_ASSERT_OR_RETURN(status == NV_OK, status);
 
-    NV_PRINTF(LEVEL_INFO, "PMA input\n");
-    NV_PRINTF(LEVEL_INFO, "          Owner: 0x%x\n", pAllocData->owner);
-    NV_PRINTF(LEVEL_INFO, "        hMemory: 0x%x\n", pAllocRequest->hMemory);
-    NV_PRINTF(LEVEL_INFO, "           Type: 0x%x\n", pAllocData->type);
-    NV_PRINTF(LEVEL_INFO, "          Flags: 0x%x\n", pAllocData->flags);
-    NV_PRINTF(LEVEL_INFO, "          Begin: 0x%08llx\n", pAllocData->rangeLo);
-    NV_PRINTF(LEVEL_INFO, "            End: 0x%08llx\n", pAllocData->rangeHi);
-    NV_PRINTF(LEVEL_INFO, "         Height: 0x%x\n", pAllocData->height);
-    NV_PRINTF(LEVEL_INFO, "          Width: 0x%x\n", pAllocData->width);
-    NV_PRINTF(LEVEL_INFO, "          Pitch: 0x%x\n", pAllocData->pitch);
-    NV_PRINTF(LEVEL_INFO, "           Size: 0x%08llx\n", pAllocData->size);
-    NV_PRINTF(LEVEL_INFO, "      Alignment: 0x%08llx\n",
+    NV_PRINTF(5, "PMA input\n");
+    NV_PRINTF(5, "          Owner: 0x%x\n", pAllocData->owner);
+    NV_PRINTF(5, "        hMemory: 0x%x\n", pAllocRequest->hMemory);
+    NV_PRINTF(5, "           Type: 0x%x\n", pAllocData->type);
+    NV_PRINTF(5, "          Flags: 0x%x\n", pAllocData->flags);
+    NV_PRINTF(5, "          Begin: 0x%08llx\n", pAllocData->rangeLo);
+    NV_PRINTF(5, "            End: 0x%08llx\n", pAllocData->rangeHi);
+    NV_PRINTF(5, "         Height: 0x%x\n", pAllocData->height);
+    NV_PRINTF(5, "          Width: 0x%x\n", pAllocData->width);
+    NV_PRINTF(5, "          Pitch: 0x%x\n", pAllocData->pitch);
+    NV_PRINTF(5, "           Size: 0x%08llx\n", pAllocData->size);
+    NV_PRINTF(5, "      Alignment: 0x%08llx\n",
               pAllocData->alignment);
-    NV_PRINTF(LEVEL_INFO, "         Offset: 0x%08llx\n", pAllocData->offset);
-    NV_PRINTF(LEVEL_INFO, "           Attr: 0x%x\n", pAllocData->attr);
-    NV_PRINTF(LEVEL_INFO, "          Attr2: 0x%x\n", pAllocData->attr2);
-    NV_PRINTF(LEVEL_INFO, "         Format: 0x%x\n", pAllocData->format);
-    NV_PRINTF(LEVEL_INFO, "      ComprCovg: 0x%x\n", pAllocData->comprCovg);
-    NV_PRINTF(LEVEL_INFO, "      ZCullCovg: 0x%x\n", pAllocData->zcullCovg);
-    NV_PRINTF(LEVEL_INFO, "     CtagOffset: 0x%x\n", pAllocData->ctagOffset);
-    NV_PRINTF(LEVEL_INFO, "       hVASpace: 0x%x\n", pAllocData->hVASpace);
+    NV_PRINTF(5, "         Offset: 0x%08llx\n", pAllocData->offset);
+    NV_PRINTF(5, "           Attr: 0x%x\n", pAllocData->attr);
+    NV_PRINTF(5, "          Attr2: 0x%x\n", pAllocData->attr2);
+    NV_PRINTF(5, "         Format: 0x%x\n", pAllocData->format);
+    NV_PRINTF(5, "      ComprCovg: 0x%x\n", pAllocData->comprCovg);
+    NV_PRINTF(5, "      ZCullCovg: 0x%x\n", pAllocData->zcullCovg);
+    NV_PRINTF(5, "     CtagOffset: 0x%x\n", pAllocData->ctagOffset);
+    NV_PRINTF(5, "       hVASpace: 0x%x\n", pAllocData->hVASpace);
 
     // Get the page size returned by RM.
     pageSize = stdmemQueryPageSize(pMemoryManager, pAllocRequest->hClient, pAllocData);
@@ -274,12 +274,12 @@ retry_alloc:
     pAllocRequest->pPmaAllocInfo[subdevInst]->refCount  = 1;
     pAllocRequest->pPmaAllocInfo[subdevInst]->flags     = allocOptions.flags;
 
-    NV_PRINTF(LEVEL_INFO, "\nNVRM:  Size requested: 0x%llx bytes\n", size);
-    NV_PRINTF(LEVEL_INFO, "       PageSize: 0x%x bytes\n", pageSize);
-    NV_PRINTF(LEVEL_INFO, "      PageCount: 0x%x\n", pageCount);
-    NV_PRINTF(LEVEL_INFO, "    Actual Size: 0x%llx\n",
+    NV_PRINTF(5, "\nNVRM:  Size requested: 0x%llx bytes\n", size);
+    NV_PRINTF(5, "       PageSize: 0x%x bytes\n", pageSize);
+    NV_PRINTF(5, "      PageCount: 0x%x\n", pageCount);
+    NV_PRINTF(5, "    Actual Size: 0x%llx\n",
               pAllocRequest->pPmaAllocInfo[subdevInst]->allocSize);
-    NV_PRINTF(LEVEL_INFO, "     Contiguous:  %s\n", bContig ? "YES" : "NO");
+    NV_PRINTF(5, "     Contiguous:  %s\n", bContig ? "YES" : "NO");
 
     // Get the allocation from PMA.
     status = pmaAllocatePages(pPma, pageCount, pageSize, &allocOptions,

@@ -27,7 +27,7 @@
 // 0           PDE3                                48:47
 // 1           PDE2                                46:38
 // 2           PDE1 (or 512M PTE)                  37:29
-// 3           PDE0 (dual 64k/4k PDE, or 2M PTE)   28:21
+// 3           PDE0 (dual 64k/4k PDE, or 2M PTE)   28:21             -- A30 page table struct
 // 4           PTE_64K / PTE_4K                    20:16 / 20:12
 
 #include "uvm_types.h"
@@ -55,11 +55,11 @@ static NvU32 page_table_depth_ampere(NvU32 page_size)
 {
     // The common-case is page_size == UVM_PAGE_SIZE_2M, hence the first check
     if (page_size == UVM_PAGE_SIZE_2M)
-        return 3;
+        return 3; /*return at nv a30 when cudaMalloc*/
     else if (page_size == UVM_PAGE_SIZE_512M)
         return 2;
     else
-        return 4;
+        return 4; /*return at nv a30 when cudaHostRegister*/
 }
 
 static NvU32 page_sizes_ampere(void)

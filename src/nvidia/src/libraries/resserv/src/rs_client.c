@@ -111,7 +111,7 @@ clientConstruct_IMPL
     status = clientSetHandleGenerator(pClient, 0, 0);
     if (status != NV_OK)
         return status;
-    
+
     pClient->bActive = NV_TRUE;
 
     status = clientSetRestrictedRange(pClient, 0, 0);
@@ -290,10 +290,10 @@ clientShareResourceTargetClient_IMPL
     return NV_OK;
 }
 
-NV_STATUS 
+NV_STATUS
 clientSetRestrictedRange_IMPL
 (
-    RsClient *pClient, 
+    RsClient *pClient,
     NvHandle handleRangeStart,
     NvU32 handleRangeSize
 )
@@ -523,7 +523,7 @@ clientCopyResource_IMPL
         (pServer->bRsAccessEnabled || (pParams->pSrcClient->hClient != pClient->hClient)))
     {
         RS_ACCESS_MASK rightsRequired;
-        
+
         portMemSet(&rightsRequired, 0, sizeof(rightsRequired));
         RS_ACCESS_MASK_ADD(&rightsRequired, RS_ACCESS_DUP_OBJECT);
 
@@ -864,8 +864,8 @@ clientUnmapMemory_IMPL
 
     if (status != NV_OK)
     {
-        NV_PRINTF(LEVEL_ERROR, "hClient %x: Failed to unmap cpu mapping: hResource: %x error: 0x%x\n", 
-                pClient->hClient, 
+        NV_PRINTF(LEVEL_ERROR, "hClient %x: Failed to unmap cpu mapping: hResource: %x error: 0x%x\n",
+                pClient->hClient,
                 pResourceRef->hResource,
                 status);
 
@@ -905,6 +905,7 @@ clientInterUnmap_IMPL
     return;
 }
 
+/*分配memory handle*/
 NV_STATUS
 clientGenResourceHandle_IMPL
 (
@@ -927,7 +928,7 @@ clientGenResourceHandle_IMPL
     }
 
     hFirst = hResource;
-    do 
+    do
     {
         hResource = pClient->handleRangeStart + ((pClient->handleGenIdx++) % pClient->handleRangeSize);
         status = clientValidateNewResourceHandle(pClient, hResource, NV_FALSE);
@@ -940,6 +941,9 @@ done:
     NV_ASSERT(hResource - pClient->handleRangeStart < pClient->handleRangeSize);
 
     *pHandle = hResource;
+
+    NV_PRINTF(5, "clientGenResourceHandle_IMPL handle %x", hResource);
+
     return NV_OK;
 }
 
@@ -1079,8 +1083,8 @@ _clientUnmapResourceRefMappings
         portMemSet(&lockInfo, 0, sizeof(lockInfo));
 
         params.hClient = pClient->hClient;
-        params.hDevice = (pCpuMapping->pContextRef == NULL) 
-            ? pClient->hClient 
+        params.hDevice = (pCpuMapping->pContextRef == NULL)
+            ? pClient->hClient
             : pCpuMapping->pContextRef->hResource;
         params.hMemory = pResourceRef->hResource;
         params.pLinearAddress = pCpuMapping->pLinearAddress;
@@ -1233,7 +1237,7 @@ _clientUnmapInterMappings
     pMapping = listHead(&pMapperRef->interMappings);
     while (pMapping != NULL)
     {
-        status = _unmapInterMapping(pCallContext->pServer, pClient, pMapperRef, 
+        status = _unmapInterMapping(pCallContext->pServer, pClient, pMapperRef,
                                     pMapping, pLockInfo, &pCallContext->secInfo);
         if (status != NV_OK)
         {
@@ -1272,7 +1276,7 @@ _clientUnmapInterBackRefMappings
         RsResourceRef *pMapperRef = pBackRefItem->pMapperRef;
         RsInterMapping *pMapping = pBackRefItem->pMapping;
 
-        status = _unmapInterMapping(pCallContext->pServer, pClient, pMapperRef, 
+        status = _unmapInterMapping(pCallContext->pServer, pClient, pMapperRef,
                                     pMapping, pLockInfo, &pCallContext->secInfo);
         if (status != NV_OK)
         {
@@ -1341,7 +1345,7 @@ clientValidateNewResourceHandle_IMPL
 (
     RsClient *pClient,
     NvHandle  hResource,
-    NvBool    bRestrict 
+    NvBool    bRestrict
 )
 {
     //
@@ -1644,7 +1648,7 @@ clientRefIterNext
         pResourceRef = bUseIdx ? *pIt->idxIt.pValue : pIt->mapIt.pValue;
 
         if (bUseIdx ||
-            ((pResourceRef == pIt->pScopeRef) || 
+            ((pResourceRef == pIt->pScopeRef) ||
              (refHasAncestor(pResourceRef, pIt->pScopeRef))))
         {
             NvBool bMatch = NV_TRUE;

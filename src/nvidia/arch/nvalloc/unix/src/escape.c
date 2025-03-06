@@ -38,7 +38,6 @@
 #include <osapi.h>
 #include <rmapi/exports.h>
 #include <nv-unix-nvos-params-wrappers.h>
-
 #include <nvos.h>
 #include <class/cl0000.h> // NV01_ROOT
 #include <class/cl0001.h> // NV01_ROOT_NON_PRIV
@@ -229,6 +228,7 @@ ct_assert(NV_OFFSETOF(NVOS21_PARAMETERS, hObjectNew) == NV_OFFSETOF(NVOS64_PARAM
 ct_assert(NV_OFFSETOF(NVOS21_PARAMETERS, hClass) == NV_OFFSETOF(NVOS64_PARAMETERS, hClass));
 ct_assert(NV_OFFSETOF(NVOS21_PARAMETERS, pAllocParms) == NV_OFFSETOF(NVOS64_PARAMETERS, pAllocParms));
 
+extern int NV_API_CALL nv_printf(NvU32 debuglevel, const char *printf_format, ...);
 NV_STATUS RmIoctl(
     nv_state_t  *nv,
     nv_file_private_t *nvfp,
@@ -265,8 +265,10 @@ NV_STATUS RmIoctl(
                 goto done;
             }
 
-            if (pParms->hClass == NV01_MEMORY_SYSTEM_OS_DESCRIPTOR)
+            if (pParms->hClass == NV01_MEMORY_SYSTEM_OS_DESCRIPTOR) {
+                /*cudaHostRegister go here*/
                 RmAllocOsDescriptor(pParms, secInfo);
+            }
             else
             {
                 NvU32 flags = pParms->flags;
@@ -402,11 +404,13 @@ NV_STATUS RmIoctl(
                 goto done;
             }
 
-            if (pApi->function == NVOS32_FUNCTION_ALLOC_OS_DESCRIPTOR)
+            if (pApi->function == NVOS32_FUNCTION_ALLOC_OS_DESCRIPTOR) {
                 RmCreateOsDescriptor(pApi, secInfo);
-            else
+            }
+            else {
+                /*cudaMalloc go here*/
                 Nv04VidHeapControlWithSecInfo(pApi, secInfo);
-
+            }
             break;
         }
 
